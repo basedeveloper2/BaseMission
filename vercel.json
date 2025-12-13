@@ -1,10 +1,17 @@
 {
   "functions": {
     "api/index.ts": {
-      "includeFiles": "server/src/**"
+      "includeFiles": "server/**"
+    },
+    "api/health.ts": {
+      "includeFiles": "server/**"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index"
