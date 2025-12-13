@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import Welcome from "./pages/Welcome";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import QuestDetail from "./pages/QuestDetail";
@@ -14,7 +15,7 @@ import { getUser } from "./services/api";
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const isOnboarding = location.pathname === "/";
+  const isPublicPage = location.pathname === "/" || location.pathname === "/onboarding";
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ const App = () => {
       try {
         const user = await getUser(address);
         if (!user) {
-           navigate("/");
+           navigate("/onboarding");
         }
       } catch {
          // If error checking user, safe to assume might need onboarding or just stay
@@ -84,7 +85,7 @@ const App = () => {
       </div>
 
       {/* Navigation */}
-      {!isOnboarding && (
+      {!isPublicPage && (
         <nav className="sticky top-4 z-50 mx-4 lg:mx-auto max-w-7xl transition-all duration-300">
           <div className="bg-[#13131F]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 px-4 py-3 lg:px-6">
             <div className="flex items-center justify-between">
@@ -178,7 +179,8 @@ const App = () => {
       {/* Main Content */}
       <main className="flex-grow z-10">
         <Routes>
-          <Route path="/" element={<Onboarding />} />
+          <Route path="/" element={<Welcome />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/quest/:id" element={<QuestDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
@@ -189,7 +191,7 @@ const App = () => {
       </main>
 
       {/* Footer */}
-      {!isOnboarding && (
+      {!isPublicPage && (
          <footer className="border-t border-border-dark bg-[#111118] py-8">
             <div className="max-w-[1200px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2 text-text-secondary">
