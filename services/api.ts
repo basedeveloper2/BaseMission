@@ -1,4 +1,4 @@
-type UserDoc = { _id: string; handle?: string; address?: string; createdAt?: string; xp?: number; level?: number; avatarUrl?: string; estimatedCost?: string; walletConnectedAt?: string; category?: string };
+type UserDoc = { _id: string; handle?: string; address?: string; createdAt?: string; xp?: number; level?: number; avatarUrl?: string; estimatedCost?: string; walletConnectedAt?: string; category?: string; questsCompleted?: number; rank?: number; streakDays?: number };
 type UsersResponse = { items: UserDoc[]; total: number };
 
 let usersCache: { key: string; data: UserDoc[]; ts: number } | null = null;
@@ -16,6 +16,15 @@ function apiUrl(path: string): string {
 const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || undefined;
 
 export async function getUser(address: string): Promise<UserDoc | null> {
+  // Use the dedicated profile endpoint for richer data if available, otherwise fall back or just use it directly
+  try {
+    const res = await fetch(apiUrl(`/api/v1/users/profile/${address}`));
+    if (res.ok) {
+        return await res.json();
+    }
+  } catch (e) {
+      // ignore
+  }
   const users = await getUsers({ q: address, limit: 1 });
   return users.find(u => u.address?.toLowerCase() === address.toLowerCase()) || null;
 }
@@ -101,18 +110,33 @@ export async function joinQuest(opts: { address: string; slug: string }): Promis
   return { status: data.status || "joined", progress: data.progress || 0 };
 }
 
-export async function completeQuest(opts: { address: string; slug: string }): Promise<{ status: string; xp: number; awarded: boolean }> {
+export async function completeQuest(opts: { address: string; slug: string }): Promise<{ status: string; xp: number; awarded: boolean; newBadges?: string[] }> {
   const res = await fetch(apiUrl(`/api/v1/participations/complete`), {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ address: opts.address, slug: opts.slug }),
+    body: JSON.stringify(opts),
   });
-  // Invalidate cache
-  questsCache = null;
-  
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to complete quest: ${res.status}${text ? ` ${text}` : ""}`);
-  }
+  if (!res.ok) throw new Error(`Failed to complete quest: ${res.status}`);
+  return await res.json();
+}
+
+export type LotteryUser = { userId: string; handle?: string; avatarUrl?: string; questCount: number };
+export type LotteryResponse = { eligibleUsers: LotteryUser[]; weekStart: string; totalEligible: number };
+export type LotteryDrawResponse = { winner: LotteryUser; weekStart: string };
+
+export async function getEligibleLotteryUsers(): Promise<LotteryResponse> {
+  const res = await fetch(apiUrl(`/api/v1/lottery/eligible`));
+  if (!res.ok) throw new Error(`Failed to fetch eligible users: ${res.status}`);
+  return await res.json();
+}
+
+export type LotteryWinnerResponse = { 
+    winner: { userId: string; handle?: string; avatarUrl?: string; weekStart: string; drawnAt: string } | null;
+    nextDraw: string;
+};
+
+export async function getLatestLotteryWinner(): Promise<LotteryWinnerResponse> {
+  const res = await fetch(apiUrl(`/api/v1/lottery/latest-winner`));
+  if (!res.ok) throw new Error(`Failed to fetch latest winner: ${res.status}`);
   return await res.json();
 }

@@ -18,7 +18,7 @@ async function checkData() {
       console.log("Sample quest:", quests[0]);
       // Log all quests with their title and audienceCategory
       console.log("All Quests Categories:");
-      quests.forEach(q => console.log(`- ${q.title}: ${q.audiencecategory} (Day ${q.day})`));
+      quests.forEach(q => console.log(`- ${q.slug}: ${q.title} (Day ${q.day})`));
       
       console.log("Categories present:", [...new Set(quests.map(q => q.audiencecategory))]);
       console.log("Days present:", [...new Set(quests.map(q => q.day))]);

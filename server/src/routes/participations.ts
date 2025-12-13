@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { getSupabase } from "../db";
+import { checkBadges } from "../constants/badges";
 
 export async function registerParticipationRoutes(app: FastifyInstance) {
   app.route({
@@ -30,6 +31,7 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
         },
         400: { type: "object", properties: { error: { type: "string" } } },
         404: { type: "object", properties: { error: { type: "string" } } },
+        500: { type: "object", properties: { error: { type: "string" } } },
         503: { type: "object", properties: { error: { type: "string" } } },
       },
     },
@@ -44,7 +46,7 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
         let userCategory = user?.category as string | undefined;
         if (!userId) {
           // Try to upsert to handle race conditions where user might have been created
-          const { data: created, error } = await s.from("users").upsert({ address: String(address).toLowerCase(), isActive: true }, { onConflict: "address" }).select().single();
+          const { data: created, error } = await s.from("users").upsert({ address: String(address).toLowerCase(), isactive: true }, { onConflict: "address" }).select().single();
           if (error) throw error;
           userId = created?.id as string | undefined;
           userCategory = created?.category as string | undefined;
@@ -54,11 +56,11 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
         if (userCategory && quest.audiencecategory && userCategory !== quest.audiencecategory) {
           return reply.code(400).send({ error: "quest not available for your category" });
         }
-        const { data: part } = await s.from("participations").upsert({ userId, questId: quest.id, status: "joined", progress: 0 }, { onConflict: "userId,questId" }).select().single();
+        const { data: part } = await s.from("participations").upsert({ userid: userId, questid: quest.id, status: "joined", progress: 0 }, { onConflict: "userid,questid" }).select().single();
         return reply.code(200).send({
           _id: String(part?.id),
-          userId: String(part?.userId),
-          questId: String(part?.questId),
+          userId: String(part?.userid),
+          questId: String(part?.questid),
           status: part?.status || "joined",
           progress: part?.progress || 0,
         });
@@ -91,6 +93,7 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
             xp: { type: "integer" },
             level: { type: "integer" },
             awarded: { type: "boolean" },
+            newBadges: { type: "array", items: { type: "string" } }
           },
         },
         400: { type: "object", properties: { error: { type: "string" } } },
@@ -116,7 +119,7 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
              return reply.code(400).send({ error: "Quest not available for your category" });
         }
 
-        const { data: existingPart } = await s.from("participations").select("status").eq("userId", user.id).eq("questId", quest.id).single();
+        const { data: existingPart } = await s.from("participations").select("status").eq("userid", user.id).eq("questid", quest.id).single();
         
         if (existingPart?.status === "completed") {
           return reply.code(200).send({ status: "completed", xp: user.xp, awarded: false });
@@ -128,11 +131,11 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
         // However, Supabase client might handle casing.
         // Let's explicitly try to ensure it matches the read pattern if read fails
         await s.from("participations").upsert({ 
-            userId: user.id, 
-            questId: quest.id, 
+            userid: user.id, 
+            questid: quest.id, 
             status: "completed", 
             progress: 100 
-        }, { onConflict: "userId,questId" });
+        }, { onConflict: "userid,questid" });
 
         // Award XP
         const reward = quest.rewardvalue || 0;
@@ -145,7 +148,44 @@ export async function registerParticipationRoutes(app: FastifyInstance) {
             await s.from("users").update({ xp: newXp, level: newLevel }).eq("id", user.id);
         }
 
-        return reply.code(200).send({ status: "completed", xp: newXp, level: newLevel, awarded: true });
+        // --- BADGE CHECK ---
+        let newBadges: string[] = [];
+        try {
+            // Get stats
+            const { count: questsCompleted } = await s.from("participations").select("*", { count: "exact", head: true }).eq("userid", user.id).eq("status", "completed");
+            // Get today's quests
+            const todayStart = new Date();
+            todayStart.setHours(0,0,0,0);
+            const { count: questsToday } = await s.from("participations")
+                .select("*", { count: "exact", head: true })
+                .eq("userid", user.id)
+                .eq("status", "completed")
+                .gte("joinedAt", todayStart.toISOString()); // Assuming joinedAt is close to completion or we should track completedAt
+
+            // Get existing badges
+            const { data: existingBadges } = await s.from("user_badges").select("badgeId").eq("userId", user.id);
+            const currentBadgeIds = (existingBadges || []).map((b: any) => b.badgeId || b.badgeid);
+
+            const now = new Date();
+            const badgesToAward = checkBadges(
+                currentBadgeIds, 
+                { questsCompleted: (questsCompleted || 0) + 1, questsToday: (questsToday || 0) + 1 }, // +1 for current
+                { hour: now.getHours(), day: now.getDay() }
+            );
+
+            if (badgesToAward.length > 0) {
+                for (const badgeId of badgesToAward) {
+                    await s.from("user_badges").upsert({ userId: user.id, badgeId }, { onConflict: "userId,badgeId" });
+                }
+                newBadges = badgesToAward;
+            }
+        } catch (err) {
+            console.error("Badge check failed:", err);
+            // Don't fail the request if badges fail
+        }
+        // -------------------
+
+        return reply.code(200).send({ status: "completed", xp: newXp, level: newLevel, awarded: true, newBadges });
       } catch (e: any) {
         return reply.code(500).send({ error: e.message || "Failed to complete quest" });
       }

@@ -12,13 +12,14 @@
         theme: {
           extend: {
             colors: {
-              primary: "#2b2bee",
-              "background-light": "#f6f6f8",
-              "background-dark": "#101022",
-              "card-dark": "#1c1c27",
-              "surface-highlight": "#282839",
-              "text-secondary": "#9d9db9",
-              "border-dark": "#282839",
+              primary: "#4f46e5", // Indigo-600 for a more modern web3 look
+              "primary-glow": "#4338ca",
+              "background-light": "#f8fafc",
+              "background-dark": "#0b0b15", // Deeper dark
+              "card-dark": "#161622",
+              "surface-highlight": "#232333",
+              "text-secondary": "#94a3b8",
+              "border-dark": "#232333",
             },
             fontFamily: {
               display: ["Space Grotesk", "sans-serif"],
@@ -59,20 +60,56 @@
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #101022;
+        background: #0b0b15;
       }
       ::-webkit-scrollbar-thumb {
         background: #282839;
         border-radius: 4px;
+        border: 2px solid #0b0b15;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3b3b54;
+        background: #4f46e5;
       }
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
       .filled-icon {
         font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      
+      /* Glassmorphism Utilities */
+      .glass {
+        background: rgba(28, 28, 39, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-card {
+        background: linear-gradient(145deg, rgba(28, 28, 39, 0.9) 0%, rgba(16, 16, 34, 0.95) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      }
+      .glass-card:hover {
+        border-color: rgba(79, 70, 229, 0.3);
+        box-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+      }
+      
+      /* Animations */
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      
+      @keyframes pulse-glow {
+        0%, 100% { opacity: 0.5; box-shadow: 0 0 10px rgba(43, 43, 238, 0.2); }
+        50% { opacity: 1; box-shadow: 0 0 25px rgba(43, 43, 238, 0.6); }
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 3s infinite;
       }
     </style>
   <script type="importmap">

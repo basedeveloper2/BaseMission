@@ -7,6 +7,7 @@ import { registerUsersRoutes } from "./routes/users";
 import { registerParticipationRoutes } from "./routes/participations";
 import { checkSupabase, getSupabase } from "./db";
 import { registerQuestsRoutes } from "./routes/quests";
+import { registerLotteryRoutes } from "./routes/lottery";
 import { z } from "zod";
 
 export async function buildApp() {
@@ -67,6 +68,7 @@ export async function buildApp() {
   await registerUsersRoutes(app);
   await registerQuestsRoutes(app);
   await registerParticipationRoutes(app);
+  await registerLotteryRoutes(app);
 
   app.get("/api/v1/status", async () => ({ status: "ok", db: (await checkSupabase()) ? "connected" : "disconnected" }));
   return app;

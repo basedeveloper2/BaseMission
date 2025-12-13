@@ -1,8 +1,104 @@
 import { FastifyInstance } from "fastify";
 import { getSupabase } from "../db";
-
+import { BADGES } from "../constants/badges";
 
 export async function registerUsersRoutes(app: FastifyInstance) {
+  app.route({
+    method: "GET",
+    url: "/api/v1/users/profile/:address",
+    schema: {
+      description: "Get user profile with detailed stats",
+      tags: ["users"],
+      params: {
+        type: "object",
+        properties: {
+          address: { type: "string" },
+        },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            handle: { type: "string" },
+            address: { type: "string" },
+            createdAt: { type: "string" },
+            xp: { type: "integer" },
+            level: { type: "integer" },
+            avatarUrl: { type: "string" },
+            category: { type: "string" },
+            estimatedCost: { type: "string" },
+            questsCompleted: { type: "integer" },
+            rank: { type: "integer" },
+            badges: { 
+              type: "array", 
+              items: { 
+                type: "object", 
+                properties: { 
+                    id: { type: "string" },
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    icon: { type: "string" },
+                    color: { type: "string" },
+                    awardedAt: { type: "string" }
+                } 
+              } 
+            },
+          },
+        },
+        404: { type: "object", properties: { error: { type: "string" } } },
+        503: { type: "object", properties: { error: { type: "string" } } },
+        500: { type: "object", properties: { error: { type: "string" } } },
+      },
+    },
+    handler: async (req, reply) => {
+      const s = getSupabase();
+      if (!s) return reply.code(503).send({ error: "Database not connected" });
+      try {
+        const { address } = (req as any).params;
+        const addr = String(address).toLowerCase();
+        
+        const { data: user, error } = await s.from("users").select("*").eq("address", addr).single();
+        if (error || !user) return reply.code(404).send({ error: "User not found" });
+
+        // Get Quests Completed Count
+        const { count: questsCompleted } = await s.from("participations").select("*", { count: "exact", head: true }).eq("userid", user.id).eq("status", "completed");
+
+        // Get Rank
+        const { count: betterUsers } = await s.from("users").select("*", { count: "exact", head: true }).gt("xp", user.xp || 0);
+        const rank = (betterUsers || 0) + 1;
+
+        // Get Badges
+        const { data: userBadges } = await s.from("user_badges").select("badgeId,awardedAt").eq("userId", user.id);
+        const badges = (userBadges || []).map((ub: any) => {
+            const def = BADGES.find(b => b.id === (ub.badgeId || ub.badgeid));
+            if (!def) return null;
+            return {
+                ...def,
+                awardedAt: ub.awardedAt || ub.awardedat
+            };
+        }).filter(Boolean);
+
+        return reply.code(200).send({
+          _id: String(user.id),
+          handle: user.handle,
+          address: user.address,
+          createdAt: user.createdAt || user.created_at || user.createdat,
+          xp: user.xp || 0,
+          level: typeof user.level === "number" ? user.level : Math.floor((user.xp || 0) / 1000),
+          avatarUrl: user.avatarUrl || user.avatar_url || user.avatarurl,
+          estimatedCost: user.estimatedCost || user.estimated_cost,
+          category: user.category,
+          questsCompleted: questsCompleted || 0,
+          rank: rank || 0,
+          badges,
+        });
+      } catch (e: any) {
+        return reply.code(500).send({ error: e?.message || "Failed to fetch user profile" });
+      }
+    },
+  });
+
   app.route({
     method: "GET",
     url: "/api/v1/users",
@@ -150,7 +246,12 @@ export async function registerUsersRoutes(app: FastifyInstance) {
         const awardXp = !!handle && !hadHandle ? (xpMap[chosenCategory] || 0) : 0;
         const newXp = (existing?.xp || 0) + awardXp;
         const newLevel = Math.floor(newXp / 1000);
-        const updateFieldsBase: any = { xp: newXp, level: newLevel, wallet_connected_at: now };
+        const updateFieldsBase: any = { xp: newXp, level: newLevel };
+        // Access safely
+        const existingWalletConnectedAt = (existing as any)?.wallet_connected_at || (existing as any)?.walletConnectedAt;
+        if (!existingWalletConnectedAt) {
+             updateFieldsBase.wallet_connected_at = now;
+        }
         if (category) updateFieldsBase.category = chosenCategory;
         if (avatarUrl) updateFieldsBase.avatar_url = String(avatarUrl);
         if (estimatedCost) updateFieldsBase.estimated_cost = String(estimatedCost);

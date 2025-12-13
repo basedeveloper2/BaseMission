@@ -61,3 +61,19 @@ create table if not exists participations (
   joinedAt timestamptz default now(),
   unique (userId, questId)
 );
+
+create table if not exists user_badges (
+  id uuid primary key default gen_random_uuid(),
+  userId uuid not null references users(id) on delete cascade,
+  badgeId text not null,
+  awardedAt timestamptz default now(),
+  unique (userId, badgeId)
+);
+
+create table if not exists lottery_winners (
+  id uuid primary key default gen_random_uuid(),
+  week_start timestamptz not null,
+  winner_id uuid not null references users(id) on delete cascade,
+  drawn_at timestamptz default now(),
+  unique(week_start)
+);
