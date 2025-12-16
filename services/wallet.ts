@@ -1,10 +1,33 @@
 import CoinbaseWalletSDK from "@coinbase/wallet-sdk";
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { normalize } from 'viem/ens';
 
 const APP_NAME = "Base Missions";
 const APP_LOGO_URL = "";
 const DEFAULT_CHAIN_ID = 8453; // Base Mainnet
 
+// Initialize Viem Client for Base
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http()
+});
+
 let provider: any | null = null;
+
+export async function resolveBasename(address: string): Promise<string | null> {
+  try {
+    // Try standard ENS resolution (Base Names are L2 ENS)
+    // Note: This relies on the user having set their Primary Name (Reverse Record)
+    const name = await publicClient.getEnsName({
+      address: address as `0x${string}`,
+    });
+    return name;
+  } catch (e) {
+    // console.error("Failed to resolve Basename:", e);
+    return null;
+  }
+}
 
 export async function connectCoinbaseWallet(): Promise<{ address: string; chainId: number }> {
   if (!provider) {

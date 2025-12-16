@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { connectCoinbaseWallet, disconnectWallet, getConnectedWallet } from "../services/wallet.ts";
+import { connectCoinbaseWallet, disconnectWallet, getConnectedWallet, resolveBasename } from "../services/wallet.ts";
 import { upsertWallet, getUser } from "../services/api.ts";
 
 const Onboarding = () => {
@@ -8,10 +8,15 @@ const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [resolvingName, setResolvingName] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("newcomer");
-  const [handle, setHandle] = useState<string>("odyssey_explorer");
+  const [handle, setHandle] = useState<string>("");
+  const [basename, setBasename] = useState<string | null>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [checkingUser, setCheckingUser] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   useEffect(() => {
     const w = getConnectedWallet();
@@ -22,19 +27,45 @@ const Onboarding = () => {
   }, []);
 
   async function checkUserExists(addr: string) {
+     setCheckingUser(true);
+     setCheckError(null);
      try {
        const user = await getUser(addr);
        if (user && user.category) {
          // User already exists and has category, redirect to dashboard immediately
          navigate("/dashboard");
        } else {
-         // New user or missing category, show step 2
+         // New user or missing category, show step 2 and resolve basename
          setStep(2);
+         await checkBasename(addr);
        }
-     } catch {
-       // On error, assume new user or retry? For now let them proceed to claim
-       setStep(2);
+     } catch (e: any) {
+       console.error("Check user error:", e);
+       // Do not auto-advance on error. Show retry.
+       setCheckError("Failed to load profile. Please check your connection.");
+     } finally {
+       setCheckingUser(false);
      }
+  }
+
+  async function checkBasename(addr: string) {
+      setResolvingName(true);
+      try {
+          const name = await resolveBasename(addr);
+          if (name) {
+              setBasename(name);
+              setHandle(name);
+          } else {
+              setBasename(null);
+              // If no basename, we will skip step 2 logic later or allow user to proceed without handle?
+              // User requirement: "if their wallet does not have a mint base name from base, then skip that part"
+              // We'll handle this in the render logic
+          }
+      } catch (e) {
+          console.error("Error resolving basename:", e);
+      } finally {
+          setResolvingName(false);
+      }
   }
 
   async function handleConnect() {
@@ -59,6 +90,7 @@ const Onboarding = () => {
         body: JSON.stringify({ address })
       });
       setStep(2);
+      await checkBasename(address);
     } catch (e) {
       console.error(e);
     } finally {
@@ -108,6 +140,7 @@ const Onboarding = () => {
           {step === 1 && (
             <div className="pl-[56px]">
               {address ? (
+                <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 group hover:border-primary/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
@@ -124,6 +157,24 @@ const Onboarding = () => {
                   <button onClick={handleDisconnect} className="text-xs text-text-secondary hover:text-white underline decoration-white/30 hover:decoration-white transition-all">
                     Disconnect
                   </button>
+                </div>
+                {checkingUser && (
+                    <div className="flex items-center gap-3 px-4 text-text-secondary">
+                        <span className="size-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                        <span className="text-sm">Verifying profile...</span>
+                    </div>
+                )}
+                {checkError && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-red-400 text-sm font-bold">
+                            <span className="material-symbols-outlined text-[18px]">error</span>
+                            {checkError}
+                        </div>
+                        <button onClick={() => checkUserExists(address)} className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-bold transition-colors">
+                            Retry
+                        </button>
+                    </div>
+                )}
                 </div>
               ) : (
                 <button 
@@ -165,29 +216,68 @@ const Onboarding = () => {
                     </div>
                   </div>
                 </div>
+                
+                {resolvingName ? (
+                     <div className="pl-0 sm:pl-[56px] py-8 flex items-center gap-3">
+                         <span className="size-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                         <span className="text-text-secondary">Checking for Base Name...</span>
+                     </div>
+                ) : (
                 <div className="pl-0 sm:pl-[56px] flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-white uppercase tracking-wider">Username</label>
-                    <div className="relative flex items-center group/input">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-0 group-hover/input:opacity-20 transition-opacity"></div>
-                      <input 
-                        value={handle} 
-                        onChange={(e) => setHandle(e.target.value)} 
-                        className="relative z-10 h-14 w-full rounded-xl bg-black/40 border border-white/10 focus:border-primary/50 focus:bg-black/60 focus:ring-0 text-white placeholder-text-secondary pl-5 pr-32 transition-all font-bold text-lg" 
-                        placeholder="superfan2024" 
-                        type="text" 
-                      />
-                      <span className="absolute right-5 text-text-secondary font-bold select-none text-lg z-20">.base.eth</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-green-400 text-sm mt-1 animate-pulse">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      <span className="font-bold">Available!</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center rounded-xl bg-white/5 p-4 border border-white/5">
-                    <span className="text-sm text-text-secondary font-medium">Estimated Cost</span>
-                    <span className="text-sm font-bold text-white bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Free <span className="text-white/50 font-normal ml-1">(+ Gas)</span></span>
-                  </div>
+                  {/* Basename Detected Section */}
+                   {basename ? (
+                     <div className="flex flex-col gap-2">
+                         <label className="text-sm font-bold text-white uppercase tracking-wider">Your Base Name</label>
+                         <div className="relative flex items-center group/input">
+                           <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-0 group-hover/input:opacity-20 transition-opacity"></div>
+                           <div className="relative z-10 h-14 w-full rounded-xl bg-black/40 border border-white/10 flex items-center pl-5 pr-4 text-white font-bold text-lg">
+                              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-primary-glow">
+                                 {basename}
+                              </span>
+                              <span className="ml-auto flex items-center gap-2 text-green-400 text-sm font-medium px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                                 <span className="material-symbols-outlined text-[16px]">verified</span>
+                                 Verified Owner
+                              </span>
+                           </div>
+                         </div>
+                     </div>
+                   ) : (
+                     showManualInput ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm font-bold text-white uppercase tracking-wider">Enter Base Name</label>
+                                <button onClick={() => setShowManualInput(false)} className="text-xs text-text-secondary hover:text-white underline">Cancel</button>
+                            </div>
+                            <div className="relative flex items-center group/input">
+                              <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-0 group-hover/input:opacity-20 transition-opacity"></div>
+                              <input 
+                                value={handle} 
+                                onChange={(e) => setHandle(e.target.value)} 
+                                className="relative z-10 h-14 w-full rounded-xl bg-black/40 border border-white/10 focus:border-primary/50 focus:bg-black/60 focus:ring-0 text-white placeholder-text-secondary pl-5 pr-32 transition-all font-bold text-lg" 
+                                placeholder="superfan2024" 
+                                type="text" 
+                              />
+                              <span className="absolute right-5 text-text-secondary font-bold select-none text-lg z-20">.base.eth</span>
+                            </div>
+                        </div>
+                     ) : (
+                     <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="size-10 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
+                                <span className="material-symbols-outlined">sentiment_dissatisfied</span>
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-white">No Base Name Found</h4>
+                                <p className="text-xs text-text-secondary mt-1">We couldn't find a Primary Name.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowManualInput(true)} className="text-xs font-bold text-primary hover:text-primary-glow underline">
+                            I have one
+                        </button>
+                     </div>
+                     )
+                   )}
+
                   <div className="flex flex-col gap-3">
                     <label className="text-sm font-bold text-white uppercase tracking-wider">Choose Category</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -217,7 +307,9 @@ const Onboarding = () => {
                       setClaimError(null);
                       setClaiming(true);
                       try {
-                        await upsertWallet({ address, handle, category, estimatedCost: 'Free (+ Gas)' });
+                        const finalHandle = handle ? handle.trim() : ""; 
+                        // If we have a basename, use it. If not, send empty handle (or skip sending handle)
+                        await upsertWallet({ address, handle: finalHandle, category, estimatedCost: '0' });
                         setStep(3);
                       } catch (e: any) {
                         setClaimError(e?.message ? String(e.message) : "Failed to claim identity");
@@ -231,11 +323,11 @@ const Onboarding = () => {
                     {claiming ? (
                       <>
                         <span className="size-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                        <span>Minting Identity...</span>
+                        <span>Setting up...</span>
                       </>
                     ) : (
                       <>
-                        <span>Claim Identity</span>
+                        <span>{basename ? "Confirm Identity" : "Continue"}</span>
                         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                       </>
                     )}
@@ -247,6 +339,7 @@ const Onboarding = () => {
                     </div>
                   )}
                 </div>
+                )}
               </div>
             </div>
           </section>

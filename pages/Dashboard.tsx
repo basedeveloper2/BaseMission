@@ -101,8 +101,13 @@ const Dashboard = () => {
         // Initialize timer from stored state
         let initialTime = 0;
         if (userData && userData.estimatedCost) {
-            const parsed = parseInt(userData.estimatedCost, 10);
-            if (!isNaN(parsed)) initialTime = parsed;
+            // Check if it's the legacy "Free (+ Gas)" string
+            if (String(userData.estimatedCost).includes("Free")) {
+                initialTime = 0;
+            } else {
+                const parsed = parseInt(userData.estimatedCost, 10);
+                if (!isNaN(parsed)) initialTime = parsed;
+            }
         }
         accumulatedTimeRef.current = initialTime;
         
@@ -164,7 +169,30 @@ const Dashboard = () => {
         updateTimer(); // Initial call
         const interval = setInterval(updateTimer, 1000);
         
-        return () => clearInterval(interval);
+        // Auto-save accumulated time every 30 seconds
+        const saveInterval = setInterval(() => {
+            const w = getConnectedWallet();
+            if (w.address && accumulatedTimeRef.current > 0) {
+                // Save time as string in estimatedCost
+                upsertWallet({ 
+                    address: w.address, 
+                    estimatedCost: String(accumulatedTimeRef.current) 
+                }).catch(console.error);
+            }
+        }, 30000);
+        
+        return () => {
+            clearInterval(interval);
+            clearInterval(saveInterval);
+            // Attempt final save on unmount (best effort)
+            const w = getConnectedWallet();
+            if (w.address && accumulatedTimeRef.current > 0) {
+                 upsertWallet({ 
+                    address: w.address, 
+                    estimatedCost: String(accumulatedTimeRef.current) 
+                }).catch(() => {});
+            }
+        };
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
