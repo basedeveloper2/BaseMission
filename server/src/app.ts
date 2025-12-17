@@ -24,13 +24,15 @@ export async function buildApp() {
   if (!env.success) {
     app.log.warn({ err: env.error }, "Invalid environment variables");
   }
-  const supabaseOK = await checkSupabase();
-  if (!supabaseOK) {
-    app.log.warn({ url: process.env.SUPABASE_URL }, "Supabase not connected");
-  } else {
-    app.log.info({ url: process.env.SUPABASE_URL }, "Supabase connected");
-    // Seed in background to not block startup
-    (async () => {
+
+  // Non-blocking Supabase check and seeding
+  (async () => {
+      const supabaseOK = await checkSupabase();
+      if (!supabaseOK) {
+        app.log.warn({ url: process.env.SUPABASE_URL }, "Supabase not connected");
+      } else {
+        app.log.info({ url: process.env.SUPABASE_URL }, "Supabase connected");
+        // Seed in background
         try {
             const s = getSupabase()!;
             const { count } = await s.from("quests").select("id", { count: "exact", head: true });
@@ -49,11 +51,12 @@ export async function buildApp() {
               }
               app.log.info("Seeded sample per-category quests to Supabase");
             }
-          } catch (e) {
+        } catch (e) {
             app.log.warn({ err: e }, "Failed to seed Supabase default data");
-          }
-    })().catch(err => app.log.error(err));
-  }
+        }
+      }
+  })().catch(err => app.log.error(err));
+
   await app.register(cors, { origin: process.env.API_CORS_ORIGIN || true, allowedHeaders: ["authorization", "content-type"] });
   await app.register(helmet);
   await app.register(rateLimit, {
