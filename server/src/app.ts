@@ -29,27 +29,30 @@ export async function buildApp() {
     app.log.warn({ url: process.env.SUPABASE_URL }, "Supabase not connected");
   } else {
     app.log.info({ url: process.env.SUPABASE_URL }, "Supabase connected");
-    try {
-      const s = getSupabase()!;
-      const { count } = await s.from("quests").select("id", { count: "exact", head: true });
-      if (!count || count < 10) {
-        const categories: { key: "newcomer" | "builder" | "creator" | "defi"; xp: number }[] = [
-          { key: "newcomer", xp: 50 },
-          { key: "builder", xp: 120 },
-          { key: "creator", xp: 100 },
-          { key: "defi", xp: 110 },
-        ];
-        for (const cat of categories) {
-          for (let day = 1; day <= 3; day++) {
-            const slug = `${cat.key}-day-${day}`;
-            await s.from("quests").upsert({ slug, title: `${cat.key} quest day ${day}`, description: `${cat.key} quest day ${day}`, status: "active", rewardType: "xp", rewardValue: cat.xp, audienceCategory: cat.key, day, displayOrder: day }, { onConflict: "slug" });
+    // Seed in background to not block startup
+    (async () => {
+        try {
+            const s = getSupabase()!;
+            const { count } = await s.from("quests").select("id", { count: "exact", head: true });
+            if (!count || count < 10) {
+              const categories: { key: "newcomer" | "builder" | "creator" | "defi"; xp: number }[] = [
+                { key: "newcomer", xp: 50 },
+                { key: "builder", xp: 120 },
+                { key: "creator", xp: 100 },
+                { key: "defi", xp: 110 },
+              ];
+              for (const cat of categories) {
+                for (let day = 1; day <= 3; day++) {
+                  const slug = `${cat.key}-quest-${day}`;
+                  await s.from("quests").upsert({ slug, title: `${cat.key} quest ${day}`, description: `${cat.key} quest ${day}`, status: "active", rewardType: "xp", rewardValue: cat.xp, audienceCategory: cat.key, day, displayOrder: day }, { onConflict: "slug" });
+                }
+              }
+              app.log.info("Seeded sample per-category quests to Supabase");
+            }
+          } catch (e) {
+            app.log.warn({ err: e }, "Failed to seed Supabase default data");
           }
-        }
-        app.log.info("Seeded sample per-category quests to Supabase");
-      }
-    } catch (e) {
-      app.log.warn({ err: e }, "Failed to seed Supabase default data");
-    }
+    })().catch(err => app.log.error(err));
   }
   await app.register(cors, { origin: process.env.API_CORS_ORIGIN || true, allowedHeaders: ["authorization", "content-type"] });
   await app.register(helmet);

@@ -29,6 +29,11 @@ export function getSupabase(): SupabaseClient | null {
 export async function checkSupabase(): Promise<boolean> {
   const s = getSupabase();
   if (!s) return false;
-  const { error } = await s.from("users").select("id").limit(1);
-  return !error;
+  try {
+    const { error } = await s.from("users").select("id").limit(1);
+    return !error;
+  } catch (e) {
+    console.error("Supabase check failed:", e);
+    return false;
+  }
 }
