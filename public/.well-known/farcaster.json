@@ -1,0 +1,29 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjM2MjEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0NTRiNTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1In0",
+    "payload": "eyJkb21haW4iOiJleGFtcGxlLmNvbSJ9",
+    "signature": "MHg1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Base Mission",
+    "homeUrl": "https://base-mission.vercel.app",
+    "iconUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuC6LpPbgdzR9f79pNHm2kQfTWGnmuZa8C7MnXAtUXGrlKYPvIs_2PgDsFw_54Gl_5oyyKFmb1A17y610Y0RZ113xwBnCCWe5Qxn7LjWLON811m-B6Ut99VHLLqQyb-7wOymd6Rl7sz89NJ16_vgzXjqQIkDq8ZZ-PpBVdvCfaP-Wpzer4Q9fIXvyW7xzJYzwek83XXKKuJoqD9eK_np5juJOly9RGtTNhEq1kR8ITn2byqwOCOHdzfur1W1usD6pED7dJSn_NWtIg",
+    "splashImageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuAgmvOfMaAMDnFEkf2fO7LuiJz9EZfRPNCRPAABwXqlQd_BQkIdERhCBYUxOEA34MxxCdx9ZeTZniZHuDJ-iqdu8gVfNpmqPrAD0w8xG0sdmoa7oZhQxLxQk075ttIVSrFuGdPTn1-b5poGfcb5lKWpqd1KfbCvIkQKwviC6azjFVT3bMRDPlIK1rQoj2B3hCsTQUJ-4AIXRKcB1zojgCW_k0W6trwtfxDgp7ZogQbmUBPZDWksepInHyPV4xDcZMvzHosg7Vs0Ew",
+    "splashBackgroundColor": "#0b0b15",
+    "webhookUrl": "https://base-mission.vercel.app/api/webhook",
+    "subtitle": "Complete quests, earn XP",
+    "description": "Join the Base Odyssey and complete missions to earn rewards.",
+    "screenshotUrls": [
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBD2sLvQIzcB3zPHI_elObc4AFpK_-op_8IB0qADIB7Ar9m5B8s7akPE9P4pCfmvnN9lrUX_zB-8Fp6WWv6qvUcf_DoGp__3NwNW6jL-KAXgAtqf7pjZi2hT8BXAh9SbN1KmGWYa3bxZaJ6xBj9CT_ph62xj9UzEOl2Qo-cWqi-Gpa7MuNGqY-fByQCADHQuapYoc5fVM9t7cKLcuMRf5P3bVRFDE5olc23gnJ4ffQLc5V67aCao2jaUcZV0CGcT0rZ_tbBy_y62A"
+    ],
+    "primaryCategory": "social",
+    "tags": ["base", "mission", "quests"],
+    "heroImageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuAgmvOfMaAMDnFEkf2fO7LuiJz9EZfRPNCRPAABwXqlQd_BQkIdERhCBYUxOEA34MxxCdx9ZeTZniZHuDJ-iqdu8gVfNpmqPrAD0w8xG0sdmoa7oZhQxLxQk075ttIVSrFuGdPTn1-b5poGfcb5lKWpqd1KfbCvIkQKwviC6azjFVT3bMRDPlIK1rQoj2B3hCsTQUJ-4AIXRKcB1zojgCW_k0W6trwtfxDgp7ZogQbmUBPZDWksepInHyPV4xDcZMvzHosg7Vs0Ew",
+    "tagline": "Your journey starts here",
+    "ogTitle": "Base Mission",
+    "ogDescription": "Complete quests on Base",
+    "ogImageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuAgmvOfMaAMDnFEkf2fO7LuiJz9EZfRPNCRPAABwXqlQd_BQkIdERhCBYUxOEA34MxxCdx9ZeTZniZHuDJ-iqdu8gVfNpmqPrAD0w8xG0sdmoa7oZhQxLxQk075ttIVSrFuGdPTn1-b5poGfcb5lKWpqd1KfbCvIkQKwviC6azjFVT3bMRDPlIK1rQoj2B3hCsTQUJ-4AIXRKcB1zojgCW_k0W6trwtfxDgp7ZogQbmUBPZDWksepInHyPV4xDcZMvzHosg7Vs0Ew",
+    "noindex": true
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { sdk } from "@farcaster/miniapp-sdk";
 import Welcome from "./pages/Welcome";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -17,6 +18,10 @@ const App = () => {
   const navigate = useNavigate();
   const isPublicPage = location.pathname === "/" || location.pathname === "/onboarding";
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    sdk.actions.ready();
+  }, []);
 
   useEffect(() => {
     const w = getConnectedWallet();
